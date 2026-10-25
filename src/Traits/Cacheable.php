@@ -73,7 +73,7 @@ trait Cacheable
         }
         self::deletingCacheController($cache_name, $is_connected);
 
-        $name = trim(request($search_name, null));
+        $name = trim((string) request($search_name, ''));
         if (! $name && ! $filter) {
             return
                 Cache::remember($cache_name, $ttl ?? now()->addHour(), function () use ($query) {
@@ -109,7 +109,7 @@ trait Cacheable
 
     protected static function getFilterdData(string $search_name, ?callable $filter, string $cache_name, bool $is_paginate, Builder|QueryBuilder $query, int $perPage, bool $is_connected)
     {
-        $name = trim(request($search_name, null));
+        $name = trim((string) request($search_name, ''));
         if ($name || $filter) {
             if ($is_paginate) {
                 return $query->skip((self::$current_page - 1) * $perPage)->take($perPage)->get();
@@ -144,7 +144,7 @@ trait Cacheable
 
     public static function deletingCache(?string $user_id = null, ...$relations)
     {
-        $all_caches = Cache::get('deleting_cache#' . (Auth::id() ?? $user_id), []);
+        $all_caches = Cache::get('deleting_cache#' . ($user_id ?? Auth::id()), []);
         $relations[] = self::$class;
 
         foreach ($relations as $rel) {
@@ -156,6 +156,19 @@ trait Cacheable
             }
             unset($all_caches[$rel]);
         }
-        Cache::put('deleting_cache#' . (Auth::id() ?? $user_id), $all_caches, now()->addDay());
+        Cache::put('deleting_cache#' . ($user_id ?? Auth::id()), $all_caches, now()->addDay());
+    }
+
+    /**
+     * Clear the tracked caches of several users, for example when one user's action
+     * changes data other users have cached, or when no user is signed in (queued jobs).
+     *
+     * @param  array  $ownerIds  ids of the users whose tracked caches are cleared
+     */
+    public static function deletingCacheFor(array $ownerIds, ...$relations): void
+    {
+        foreach ($ownerIds as $owner_id) {
+            self::deletingCache($owner_id, ...$relations);
+        }
     }
 }

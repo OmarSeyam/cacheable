@@ -67,6 +67,18 @@ Post::deletingCache();
 Post::deletingCache(null, Comment::class);
 ```
 
+An explicit `$user_id` takes precedence over the signed-in user, so you can clear another user's cache:
+
+```php
+Post::deletingCache($user->id, Comment::class);
+```
+
+To clear the caches of several users at once (for example when one user's action changes data other users have cached, or inside a queued job where no user is signed in):
+
+```php
+Post::deletingCacheFor([$author->id, $editor->id], Comment::class);
+```
+
 ## How it works
 
 - `bring()` builds (or reuses) a query, then serves results from Laravel's cache, keyed by table name (or a custom name you provide), optionally scoped per authenticated user (`Auth::id()`).
@@ -77,7 +89,15 @@ Post::deletingCache(null, Comment::class);
 ## Requirements
 
 - PHP 8.1+
-- Laravel 9, 10, 11, or 12
+- Laravel 9, 10, 11, 12, or 13
+
+## Changelog
+
+### 1.1.0
+
+- Fixed the PHP 8.1+ deprecation "Passing null to parameter #1 ($string) of type string" on reads without a search term.
+- `deletingCache()`: an explicit `$user_id` now takes precedence over the signed-in user (it was ignored whenever someone was signed in).
+- Added `deletingCacheFor(array $ownerIds, ...$relations)` to clear the tracked caches of several users at once.
 
 ## License
 
